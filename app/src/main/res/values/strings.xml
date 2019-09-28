@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">OCRMaster</string>
+
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="grayScaleText">GrayScale</string>
+    <string name="segmentationText">Segmentation</string>
+    <string name="binarizeText">Binarize</string>
+    <string name="originalText">Original</string>
+    <string name="processText">Process OCR</string>
+    <string name="imageViewDescription">Digunakan untuk menampilkan gambar hasil capture atau gallery select</string>
+    <string name="restartButton">Start Over</string>
+    <string name="copyButton">Copy to clipboard</string>
+    <string name="ok">OK</string>
+    <string name="picture">Picture</string>
+    <string name="description_info">Info</string>
+    <string name="btnCamera_desc">Take A Picture</string>
+    <string name="btnGallery_desc">Choose An Image from Gallery</string>
+    <string name="request_permission">This sample needs camera permission.</string>
+    <string name="camera_error">This device doesn\'t support Camera2 API.</string>
+    <string name="intro_message">
+        <![CDATA[
+
+
+            This sample demonstrates the basic use of Camera2 API. Check the source code to see how
+            you can display camera preview and take pictures.
+
+
+        ]]>
+    </string>
+</resources>

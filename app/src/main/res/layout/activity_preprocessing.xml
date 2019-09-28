@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:weightSum="1" >
+
+    <ImageView
+        android:id="@+id/imageView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitStart"
+        android:visibility="visible"
+        tools:visibility="visible"
+        android:layout_weight="0.7"
+        android:contentDescription="@string/imageViewDescription" />
+
+    <LinearLayout
+        android:layout_weight="0.1"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2" >
+
+        <Button
+            android:id="@+id/grayscaleButton"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/grayScaleText"
+            android:textSize="12sp"
+            tools:ignore="ButtonStyle,NestedWeights"
+            android:onClick="onClickGrayScaleButton" />
+
+        <Button
+            android:id="@+id/segmentationButton"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/segmentationText"
+            android:textSize="12sp"
+            tools:ignore="ButtonStyle"
+            android:onClick="onClickSegmentationButton" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_weight="0.1"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2" >
+
+        <Button
+            android:id="@+id/binarizeButton"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/binarizeText"
+            android:textSize="12sp"
+            tools:ignore="ButtonStyle,NestedWeights"
+            android:onClick="onClickBinarizeButton" />
+
+        <Button
+            android:id="@+id/originalButton"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/originalText"
+            android:textSize="12sp"
+            tools:ignore="ButtonStyle"
+            android:onClick="onClickOriginalButton"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/ocrButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.1"
+        android:text="@string/processText"
+        android:textSize="12sp" />
+
+</LinearLayout>
