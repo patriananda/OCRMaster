@@ -122,9 +122,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     private CameraHandlerThread mThread = null;
-
     private class CameraHandlerThread extends HandlerThread {
         Handler mHandler;
 

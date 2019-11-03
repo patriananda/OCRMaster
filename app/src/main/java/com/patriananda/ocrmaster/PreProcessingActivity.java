@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -62,14 +63,14 @@ public class PreProcessingActivity extends AppCompatActivity {
             Toast.makeText(PreProcessingActivity.this, "Cannot load the image.", Toast.LENGTH_LONG).show();
         }
 
-        Button ocrButton = findViewById(R.id.ocrButton);
-        ocrButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(getApplicationContext(), PostProcessingActivity.class);
-                startActivity(intent);
-            }
-        });
+    }
+
+    public void onClickProcessOCR(View view) {
+        Intent intent = new Intent(getApplicationContext(), PostProcessingActivity.class);
+
+        intent.putExtra("OCR_RESULT", "بسم الله");
+
+        startActivity(intent);
     }
 
     public void onClickGrayScaleButton(View view) {
