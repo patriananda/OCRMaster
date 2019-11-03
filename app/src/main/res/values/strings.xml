@@ -16,8 +16,8 @@
     <string name="description_info">Info</string>
     <string name="btnCamera_desc">Take A Picture</string>
     <string name="btnGallery_desc">Choose An Image from Gallery</string>
-    <string name="request_permission">This sample needs camera permission.</string>
-    <string name="camera_error">This device doesn\'t support Camera2 API.</string>
+    <string name="request_all_permissions">Aplikasi ini membutuhkan akses ke kamera dan penyimpanan.</string>
+    <string name="camera_error">Perangkat ini tidak dapat digunakan untuk Camera2 API.</string>
     <string name="intro_message">
         <![CDATA[
 
@@ -28,4 +28,5 @@
 
         ]]>
     </string>
+    <string name="capture">Capture</string>
 </resources>

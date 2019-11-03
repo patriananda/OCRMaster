@@ -6,12 +6,13 @@
     tools:context=".MainActivity"
     android:keepScreenOn="true">
 
-    <TextureView
-        android:id="@+id/textureView"
+    <FrameLayout
+        android:id="@+id/camera_preview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_above="@+id/info"
-        android:layout_alignParentTop="true" />
+        android:layout_alignParentTop="true"
+        />
 
     <ImageButton
         android:id="@+id/info"
@@ -32,6 +33,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="20dp"
         android:src="@android:drawable/ic_menu_camera"
-        android:tint="@android:color/black"/>
+        android:tint="@android:color/black"
+        android:onClick="takePicture" />
 
 </RelativeLayout>
