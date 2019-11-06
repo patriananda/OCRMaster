@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,9 +36,15 @@ public class PostProcessingActivity extends AppCompatActivity {
 
     public void onClickCopy(View view) {
         EditText editText = findViewById(R.id.textBox);
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("label", editText.getText());
-        Objects.requireNonNull(clipboard).setPrimaryClip(clip);
+
+        if (editText.getText().toString().equals("")) {
+            Toast.makeText(this, "Nothing to copy", Toast.LENGTH_LONG).show();
+        } else {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("label", editText.getText());
+            Objects.requireNonNull(clipboard).setPrimaryClip(clip);
+            Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_LONG).show();
+        }
     }
 
     public void onClickStarOver(View view) {
