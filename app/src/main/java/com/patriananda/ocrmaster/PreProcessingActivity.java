@@ -1,8 +1,6 @@
 package com.patriananda.ocrmaster;
 
 import android.Manifest;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -17,12 +15,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -37,8 +33,8 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Objects;
 
-public class PreProcessingActivity extends AppCompatActivity {
 
+public class PreProcessingActivity extends AppCompatActivity {
     ImageView imageView;
     private static final boolean TRANSPARENT_IS_BLACK = false;
     private static final double SPACE_BREAKING_POINT = 13.0/30.0;
@@ -49,7 +45,6 @@ public class PreProcessingActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_preprocessing);
-
         imageView = findViewById(R.id.imageView);
 
         Uri selectedImageUri = getIntent().getData();
@@ -58,35 +53,40 @@ public class PreProcessingActivity extends AppCompatActivity {
             originalBitmap = BitmapFactory.decodeStream(imageStream);
 
             imageView.setImageBitmap(originalBitmap.copy(originalBitmap.getConfig(), true));
+
         } catch (IOException e) {
             e.printStackTrace();
             Toast.makeText(PreProcessingActivity.this, "Cannot load the image.", Toast.LENGTH_LONG).show();
         }
-
     }
 
     public void onClickProcessOCR(View view) {
         Intent intent = new Intent(getApplicationContext(), PostProcessingActivity.class);
-
         intent.putExtra("OCR_RESULT", "بسم الله");
-
         startActivity(intent);
+    }
+
+    public void changeButtonState(boolean[] buttons) {
+        Button btn = findViewById(R.id.grayscaleButton);
+        btn.setEnabled(buttons[0]);
+        btn = findViewById(R.id.binarizeButton);
+        btn.setEnabled(buttons[1]);
+        btn = findViewById(R.id.segmentationButton);
+        btn.setEnabled(buttons[2]);
+        btn = findViewById(R.id.originalButton);
+        btn.setEnabled(buttons[3]);
+        btn = findViewById(R.id.ocrButton);
+        btn.setEnabled(buttons[4]);
     }
 
     public void onClickGrayScaleButton(View view) {
         imageView.setImageBitmap(convertImage(originalBitmap.copy(originalBitmap.getConfig(), true)));
+        changeButtonState(new boolean[]{false, true, false, true, false});
     }
-
 
     public void onClickBinarizeButton(View view) {
         Bitmap finalSelectedBitmap = ((BitmapDrawable)imageView.getDrawable()).getBitmap();
         Bitmap binarizedImage = convertToMutable(finalSelectedBitmap);
-
-        final AlertDialog.Builder dialog = new AlertDialog.Builder(this)
-                .setTitle("Processing Image")
-                .setMessage("Loading...");
-        final AlertDialog alert = dialog.create();
-        alert.show();
 
         for (int i = 0; i < binarizedImage.getWidth(); i++) {
             for (int c = 0; c < binarizedImage.getHeight(); c++) {
@@ -99,32 +99,16 @@ public class PreProcessingActivity extends AppCompatActivity {
         }
 
         imageView.setImageBitmap(binarizedImage);
-
-        // Hide loading dialog after some seconds
-        final Handler handler  = new Handler();
-        final Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                if (alert.isShowing()) {
-                    alert.dismiss();
-                }
-            }
-        };
-        handler.postDelayed(runnable, 10000);
-
-        alert.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-                handler.removeCallbacks(runnable);
-            }
-        });
+        changeButtonState(new boolean[]{false, false, true, true, false});
     }
 
     public void onClickSegmentationButton(View view) {
+        changeButtonState(new boolean[]{false, false, false, true, true});
     }
 
     public void onClickOriginalButton(View view) {
         imageView.setImageBitmap(originalBitmap.copy(originalBitmap.getConfig(), true));
+        changeButtonState(new boolean[]{true, false, false, false, false});
     }
 
     @Override

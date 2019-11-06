@@ -43,6 +43,7 @@
             android:text="@string/segmentationText"
             android:textSize="12sp"
             tools:ignore="ButtonStyle"
+            android:enabled="false"
             android:onClick="onClickSegmentationButton" />
     </LinearLayout>
 
@@ -61,6 +62,7 @@
             android:text="@string/binarizeText"
             android:textSize="12sp"
             tools:ignore="ButtonStyle,NestedWeights"
+            android:enabled="false"
             android:onClick="onClickBinarizeButton" />
 
         <Button
@@ -71,6 +73,7 @@
             android:text="@string/originalText"
             android:textSize="12sp"
             tools:ignore="ButtonStyle"
+            android:enabled="false"
             android:onClick="onClickOriginalButton"/>
     </LinearLayout>
 
@@ -81,6 +84,7 @@
         android:layout_weight="0.1"
         android:text="@string/processText"
         android:textSize="12sp"
+        android:enabled="false"
         android:onClick="onClickProcessOCR"/>
 
 </LinearLayout>
