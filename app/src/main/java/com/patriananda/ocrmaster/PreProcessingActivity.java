@@ -1,8 +1,10 @@
 package com.patriananda.ocrmaster;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -15,6 +17,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -25,7 +28,20 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.CvException;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -40,12 +56,18 @@ public class PreProcessingActivity extends AppCompatActivity {
     private static final double SPACE_BREAKING_POINT = 13.0/30.0;
     Bitmap originalBitmap = null;
     private static final String TAG = "MainActivity";
+    ViewDialog loadingDialog;
+    Handler handler = new Handler();
+    private Runnable processImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_preprocessing);
         imageView = findViewById(R.id.imageView);
+        loadingDialog = new ViewDialog(this);
+        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
         Uri selectedImageUri = getIntent().getData();
         try {
@@ -58,12 +80,6 @@ public class PreProcessingActivity extends AppCompatActivity {
             e.printStackTrace();
             Toast.makeText(PreProcessingActivity.this, "Cannot load the image.", Toast.LENGTH_LONG).show();
         }
-    }
-
-    public void onClickProcessOCR(View view) {
-        Intent intent = new Intent(getApplicationContext(), PostProcessingActivity.class);
-        intent.putExtra("OCR_RESULT", "بسم الله");
-        startActivity(intent);
     }
 
     public void changeButtonState(boolean[] buttons) {
@@ -80,35 +96,184 @@ public class PreProcessingActivity extends AppCompatActivity {
     }
 
     public void onClickGrayScaleButton(View view) {
-        imageView.setImageBitmap(convertImage(originalBitmap.copy(originalBitmap.getConfig(), true)));
-        changeButtonState(new boolean[]{false, true, false, true, false});
+        processImage = new Runnable() {
+            public void run() {
+                try {
+                    Mat oriMat = new Mat();
+                    Utils.bitmapToMat(originalBitmap,oriMat);
+                    Mat grayMat = new Mat();
+                    Imgproc.cvtColor(oriMat, grayMat, Imgproc.COLOR_BGR2GRAY);
+                    Bitmap grayBitmap = originalBitmap.copy(originalBitmap.getConfig(), true);
+                    Utils.matToBitmap(grayMat, grayBitmap);
+                    imageView.setImageBitmap(grayBitmap);
+                    changeButtonState(new boolean[]{false, true, false, true, false});
+                    loadingDialog.hideDialog();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        showLoading();
     }
 
     public void onClickBinarizeButton(View view) {
-        Bitmap finalSelectedBitmap = ((BitmapDrawable)imageView.getDrawable()).getBitmap();
-        Bitmap binarizedImage = convertToMutable(finalSelectedBitmap);
+        processImage = new Runnable() {
+            public void run() {
+                try {
+                    Bitmap finalSelectedBitmap = ((BitmapDrawable)imageView.getDrawable()).getBitmap();
+                    Bitmap binarizedImage = convertToMutable(finalSelectedBitmap);
 
-        for (int i = 0; i < binarizedImage.getWidth(); i++) {
-            for (int c = 0; c < binarizedImage.getHeight(); c++) {
-                if (shouldBeBlack(binarizedImage.getPixel(i, c))) {
-                    binarizedImage.setPixel(i, c, Color.BLACK);
-                } else {
-                    binarizedImage.setPixel(i, c, Color.WHITE);
+                    for (int i = 0; i < binarizedImage.getWidth(); i++) {
+                        for (int c = 0; c < binarizedImage.getHeight(); c++) {
+                            if (shouldBeBlack(binarizedImage.getPixel(i, c))) {
+                                binarizedImage.setPixel(i, c, Color.BLACK);
+                            } else {
+                                binarizedImage.setPixel(i, c, Color.WHITE);
+                            }
+                        }
+                    }
+
+                    imageView.setImageBitmap(binarizedImage);
+                    changeButtonState(new boolean[]{false, false, true, true, false});
+                    loadingDialog.hideDialog();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
-        }
+        };
 
-        imageView.setImageBitmap(binarizedImage);
-        changeButtonState(new boolean[]{false, false, true, true, false});
+        showLoading();
     }
 
     public void onClickSegmentationButton(View view) {
-        changeButtonState(new boolean[]{false, false, false, true, true});
+        processImage = new Runnable() {
+            public void run() {
+                try {
+                    AssetManager assetManager = getAssets();
+                    String[] files;
+
+                    files = assetManager.list("hijaiyah");
+                    assert files != null;
+
+                    Bitmap binarizedBitmap = ((BitmapDrawable)imageView.getDrawable()).getBitmap();
+                    Rect[] allDetections = new Rect[0];
+                    Mat imageMatrix = new Mat();
+                    Utils.bitmapToMat(binarizedBitmap, imageMatrix);
+
+                    for (String fileName : files) {
+                        System.out.println("File: " + fileName);
+                        InputStream inputStream = getAssets().open("hijaiyah/" + fileName);
+                        File appDir = getApplicationContext().getFilesDir();
+                        File haarDir = new File(appDir, "haar_cascade");
+
+                        if (!haarDir.exists()) // Jika belum ada folder "haar_cascade", maka
+                            haarDir.mkdir(); // buat folder "haar_cascade"
+
+                        // cari file dengan nama sesuai di asset folder
+                        File cascadeFile = getFileStreamPath(fileName);
+
+                        if (!cascadeFile.exists()) { // Jika belum ada file yang dimaksud, maka
+                            cascadeFile = new File(haarDir, fileName); // siapkan file baru
+                            FileOutputStream outputStream = new FileOutputStream(cascadeFile);
+
+                            // buat file baru pada folder "haar_cascade"
+                            byte[] buffer = new byte[4096];
+                            int bytesRead;
+                            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                                outputStream.write(buffer, 0, bytesRead);
+                            }
+
+                            inputStream.close();
+                            outputStream.close();
+                        }
+
+                        CascadeClassifier cascadeDetector = new CascadeClassifier(cascadeFile.getAbsolutePath());
+
+                        if (cascadeDetector.empty()) {
+                            Toast.makeText(PreProcessingActivity.this, "Error loading face cascade: " + cascadeFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+//                      Mat greyedImageMatrix = new Mat();
+//                      Imgproc.cvtColor(imageMatrix, greyedImageMatrix, Imgproc.COLOR_BGR2GRAY);
+//                      Imgproc.equalizeHist(greyedImageMatrix, greyedImageMatrix);
+
+                        MatOfRect detectionRect = new MatOfRect();
+                        cascadeDetector.detectMultiScale(imageMatrix, detectionRect);
+                        Rect[] currentDetection = detectionRect.toArray();
+
+                        int fal = currentDetection.length;        //determines length of firstArray
+                        int sal = allDetections.length;   //determines length of secondArray
+                        Rect[] result = new Rect[fal + sal];  //resultant array of size first array and second array
+                        System.arraycopy(currentDetection, 0, result, 0, fal);
+                        System.arraycopy(allDetections, 0, result, fal, sal);
+
+                        allDetections = result;
+                        System.out.println("curr detect: " + currentDetection.length);
+                    }
+
+                    // Draw a bounding box around each face.
+                    for (Rect value : allDetections) {
+                        Imgproc.rectangle(imageMatrix, new Point(value.x, value.y), new Point(value.x + value.width, value.y + value.height), new Scalar(255, 0, 0));
+                        Imgproc.putText(imageMatrix, "dema", new Point(value.x, value.y), Imgproc.FONT_HERSHEY_DUPLEX, 1.0, new Scalar(0, 255, 255));
+                    }
+
+                    Bitmap segmentedImage = Bitmap.createBitmap(imageMatrix.cols(), imageMatrix.rows(), Bitmap.Config.ARGB_8888);
+                    Utils.matToBitmap(imageMatrix, segmentedImage);
+                    ByteArrayOutputStream fOut = new ByteArrayOutputStream();
+                    segmentedImage.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+                    byte[] bitmapData = fOut.toByteArray();
+
+                    imageView.setImageBitmap(BitmapFactory.decodeByteArray(bitmapData, 0, bitmapData.length));
+                    changeButtonState(new boolean[]{false, false, false, true, true});
+                    loadingDialog.hideDialog();
+                } catch (CvException e) {
+                    Log.d(TAG, Objects.requireNonNull(e.getMessage()));
+                } catch (IOException e) {
+                    Log.d(TAG, Objects.requireNonNull(e.getMessage()));
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        showLoading();
     }
 
     public void onClickOriginalButton(View view) {
-        imageView.setImageBitmap(originalBitmap.copy(originalBitmap.getConfig(), true));
-        changeButtonState(new boolean[]{true, false, false, false, false});
+        processImage = new Runnable() {
+            public void run() {
+                try {
+                    imageView.setImageBitmap(originalBitmap.copy(originalBitmap.getConfig(), true));
+                    changeButtonState(new boolean[]{true, false, false, false, false});
+                    loadingDialog.hideDialog();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        showLoading();
+    }
+
+    public void onClickProcessOCR(View view) {
+        processImage = new Runnable() {
+            public void run() {
+                try {
+                    Intent intent = new Intent(getApplicationContext(), PostProcessingActivity.class);
+                    intent.putExtra("OCR_RESULT", "بسم الله");
+
+                    loadingDialog.hideDialog();
+                    startActivity(intent);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        showLoading();
     }
 
     @Override
@@ -224,4 +389,14 @@ public class PreProcessingActivity extends AppCompatActivity {
         return imgIn;
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        handler.removeCallbacks(processImage);
+    }
+
+    public void showLoading() {
+        loadingDialog.showDialog();
+        handler.postDelayed(processImage, 200);
+    }
 }

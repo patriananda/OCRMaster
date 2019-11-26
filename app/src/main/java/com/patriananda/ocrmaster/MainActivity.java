@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -34,7 +35,8 @@ public class MainActivity extends AppCompatActivity {
     private static final int OPEN_GALLERY = 101;
     private static final int TAKE_PICTURE = 102;
     private Camera mCamera;
-    private PreviewActivity mPreview;
+    private CameraPreview mPreview;
+    private CameraHandlerThread mThread = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -102,9 +104,17 @@ public class MainActivity extends AppCompatActivity {
 
     // Add a listener to the Open Gallery button
     public void openGallery(View v) {
-        Intent intent = new Intent(Intent.ACTION_PICK);
-        intent.setType("image/*");
-        startActivityForResult(intent, OPEN_GALLERY);
+
+        Intent getIntent = new Intent(Intent.ACTION_GET_CONTENT);
+        getIntent.setType("image/*");
+
+        Intent pickIntent = new Intent(Intent.ACTION_PICK);
+        pickIntent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
+
+        Intent chooserIntent = Intent.createChooser(getIntent, "Select Image");
+        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] {pickIntent});
+
+        startActivityForResult(chooserIntent, OPEN_GALLERY);
     }
 
     /** A safe way to get an instance of the Camera object. */
@@ -113,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
             mCamera = Camera.open(1); // attempt to get a Camera instance
 
             // Create our Preview view and set it as the content of our activity.
-            mPreview = new PreviewActivity(this, mCamera);
+            mPreview = new CameraPreview(this, mCamera);
             FrameLayout preview = findViewById(R.id.camera_preview);
             preview.addView(mPreview);
         }
@@ -122,7 +132,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private CameraHandlerThread mThread = null;
     private class CameraHandlerThread extends HandlerThread {
         Handler mHandler;
 
@@ -137,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         void openCamera() {
+            // menjalankan sesuatu -> nih ada tugas nih menjalankan public void run
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {

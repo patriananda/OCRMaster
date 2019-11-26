@@ -8,19 +8,19 @@ import android.view.SurfaceView;
 
 import java.io.IOException;
 
-public class PreviewActivity extends SurfaceView implements SurfaceHolder.Callback {
+public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final String TAG = "cameraPreview";
     private SurfaceHolder mHolder;
     private Camera mCamera;
 
-    public PreviewActivity(Context context, Camera camera) {
+    public CameraPreview(Context context, Camera camera) {
         super(context);
         mCamera = camera;
         mCamera.setDisplayOrientation(90);
 
-        // Install a SurfaceHolder.Callback so we get notified when the
-        // underlying surface is created and destroyed.
+        // Install a SurfaceHolder.Callback so we get notified
+        // when the underlying surface is created and destroyed.
         mHolder = getHolder();
         mHolder.addCallback(this);
         // deprecated setting, but required on Android versions prior to 3.0
