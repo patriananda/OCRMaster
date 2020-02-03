@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
     /** A safe way to get an instance of the Camera object. */
     private void createCameraPreview() {
         try {
-            mCamera = Camera.open(1); // attempt to get a Camera instance
+            mCamera = Camera.open(); // attempt to get a Camera instance
 
             // Create our Preview view and set it as the content of our activity.
             mPreview = new CameraPreview(this, mCamera);

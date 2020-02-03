@@ -1,7 +1,6 @@
 package com.patriananda.ocrmaster;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
@@ -11,8 +10,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -47,8 +48,9 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
-
 
 public class PreProcessingActivity extends AppCompatActivity {
     ImageView imageView;
@@ -59,6 +61,7 @@ public class PreProcessingActivity extends AppCompatActivity {
     ViewDialog loadingDialog;
     Handler handler = new Handler();
     private Runnable processImage;
+    private Map<String, Rect> allDetections = new LinkedHashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,15 +74,51 @@ public class PreProcessingActivity extends AppCompatActivity {
 
         Uri selectedImageUri = getIntent().getData();
         try {
-            final InputStream imageStream = getContentResolver().openInputStream(Objects.requireNonNull(selectedImageUri));
+            InputStream imageStream = getContentResolver().openInputStream(Objects.requireNonNull(selectedImageUri));
             originalBitmap = BitmapFactory.decodeStream(imageStream);
 
-            imageView.setImageBitmap(originalBitmap.copy(originalBitmap.getConfig(), true));
+            ExifInterface ei;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                ei = new ExifInterface(imageStream);
+            } else {
+                ei = new ExifInterface(selectedImageUri.getPath());
+            }
+            int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
+
+            Bitmap rotatedBitmap;
+            switch(orientation) {
+                case ExifInterface.ORIENTATION_ROTATE_90:
+                    rotatedBitmap = rotateImage(originalBitmap, 90);
+                    break;
+
+                case ExifInterface.ORIENTATION_ROTATE_180:
+                    rotatedBitmap = rotateImage(originalBitmap, 180);
+                    break;
+
+                case ExifInterface.ORIENTATION_ROTATE_270:
+                    rotatedBitmap = rotateImage(originalBitmap, 270);
+                    break;
+
+                case ExifInterface.ORIENTATION_NORMAL:
+                default:
+                    rotatedBitmap = originalBitmap;
+            }
+
+            imageView.setImageBitmap(rotatedBitmap);
 
         } catch (IOException e) {
             e.printStackTrace();
             Toast.makeText(PreProcessingActivity.this, "Cannot load the image.", Toast.LENGTH_LONG).show();
         }
+    }
+
+    public static Bitmap rotateImage(Bitmap source, float angle) {
+        Matrix matrix = new Matrix();
+        matrix.postRotate(angle);
+        Bitmap rotatedImg = Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(),
+                matrix, true);
+        source.recycle();
+        return rotatedImg;
     }
 
     public void changeButtonState(boolean[] buttons) {
@@ -157,9 +196,8 @@ public class PreProcessingActivity extends AppCompatActivity {
                     assert files != null;
 
                     Bitmap binarizedBitmap = ((BitmapDrawable)imageView.getDrawable()).getBitmap();
-                    Rect[] allDetections = new Rect[0];
                     Mat imageMatrix = new Mat();
-                    Utils.bitmapToMat(binarizedBitmap, imageMatrix);
+                    Utils.bitmapToMat(originalBitmap, imageMatrix);
 
                     for (String fileName : files) {
                         System.out.println("File: " + fileName);
@@ -186,6 +224,7 @@ public class PreProcessingActivity extends AppCompatActivity {
 
                             inputStream.close();
                             outputStream.close();
+                            System.out.println("File has been created on app storage.");
                         }
 
                         CascadeClassifier cascadeDetector = new CascadeClassifier(cascadeFile.getAbsolutePath());
@@ -195,28 +234,34 @@ public class PreProcessingActivity extends AppCompatActivity {
                             return;
                         }
 
-//                      Mat greyedImageMatrix = new Mat();
-//                      Imgproc.cvtColor(imageMatrix, greyedImageMatrix, Imgproc.COLOR_BGR2GRAY);
-//                      Imgproc.equalizeHist(greyedImageMatrix, greyedImageMatrix);
+                        Mat greyedImageMatrix = new Mat();
+                        Imgproc.cvtColor(imageMatrix, greyedImageMatrix, Imgproc.COLOR_BGR2GRAY);
+                        Imgproc.equalizeHist(greyedImageMatrix, greyedImageMatrix);
+                        System.out.println("Image has been gray scaled.");
 
                         MatOfRect detectionRect = new MatOfRect();
+                        System.out.println("Starting image detection.");
                         cascadeDetector.detectMultiScale(imageMatrix, detectionRect);
-                        Rect[] currentDetection = detectionRect.toArray();
+                        System.out.println("Detection has been completed.");
 
-                        int fal = currentDetection.length;        //determines length of firstArray
-                        int sal = allDetections.length;   //determines length of secondArray
-                        Rect[] result = new Rect[fal + sal];  //resultant array of size first array and second array
-                        System.arraycopy(currentDetection, 0, result, 0, fal);
-                        System.arraycopy(allDetections, 0, result, fal, sal);
+                        Rect[] currentRect = detectionRect.toArray();
+                        System.out.println("Total object found : " + detectionRect.toArray().length);
+                        for (int i = 0; i < currentRect.length; i++) {
+                            allDetections.put(fileName.substring(0, fileName.lastIndexOf('.')) + '-' + i, currentRect[i]);
+                            System.out.println("curr " + i + ':');
+                            System.out.println("x" + currentRect[i].x);
+                            System.out.println("y" + currentRect[i].y);
+                            System.out.println("width" + currentRect[i].width);
+                            System.out.println("height" + currentRect[i].height);
+                        }
 
-                        allDetections = result;
-                        System.out.println("curr detect: " + currentDetection.length);
                     }
 
                     // Draw a bounding box around each face.
-                    for (Rect value : allDetections) {
-                        Imgproc.rectangle(imageMatrix, new Point(value.x, value.y), new Point(value.x + value.width, value.y + value.height), new Scalar(255, 0, 0));
-                        Imgproc.putText(imageMatrix, "dema", new Point(value.x, value.y), Imgproc.FONT_HERSHEY_DUPLEX, 1.0, new Scalar(0, 255, 255));
+                    for (Map.Entry<String, Rect> detection : allDetections.entrySet()) {
+                        Rect rect = detection.getValue();
+                        Imgproc.rectangle(imageMatrix, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(255, 0, 0));
+                        Imgproc.putText(imageMatrix, "dema", new Point(rect.x, rect.y), Imgproc.FONT_HERSHEY_DUPLEX, 1.0, new Scalar(0, 255, 255));
                     }
 
                     Bitmap segmentedImage = Bitmap.createBitmap(imageMatrix.cols(), imageMatrix.rows(), Bitmap.Config.ARGB_8888);
@@ -263,7 +308,24 @@ public class PreProcessingActivity extends AppCompatActivity {
             public void run() {
                 try {
                     Intent intent = new Intent(getApplicationContext(), PostProcessingActivity.class);
-                    intent.putExtra("OCR_RESULT", "بسم الله");
+                    StringBuilder ocrResult = new StringBuilder();
+                    for (Map.Entry<String, Rect> detection : allDetections.entrySet()) {
+                        System.out.println("KEY : " + detection.getKey());
+                        switch (detection.getKey().substring(0, detection.getKey().lastIndexOf('-'))) {
+                            case "mim_cascade":
+                                ocrResult.append("mim ");
+                                break;
+                            case "ba_front_cascade":
+                                ocrResult.append("ba_front");
+                                break;
+                            case "haarcascade_frontalface_alt":
+                                ocrResult.append("palalu");
+                                break;
+                            default:
+                                ocrResult.append("");
+                        }
+                    }
+                    intent.putExtra("OCR_RESULT", ocrResult.toString());
 
                     loadingDialog.hideDialog();
                     startActivity(intent);
@@ -289,17 +351,16 @@ public class PreProcessingActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_GRANTED) {
-                Log.v(TAG,"Permission is granted");
+//                Log.v(TAG,"Permission is granted");
                 return true;
             } else {
-
-                Log.v(TAG,"Permission is revoked");
+//                Log.v(TAG,"Permission is revoked");
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
                 return false;
             }
         }
         else { //permission is automatically granted on sdk<23 upon installation
-            Log.v(TAG,"Permission is granted");
+//            Log.v(TAG,"Permission is granted");
             return true;
         }
     }

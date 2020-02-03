@@ -43,7 +43,7 @@
             android:text="@string/segmentationText"
             android:textSize="12sp"
             tools:ignore="ButtonStyle"
-            android:enabled="false"
+            android:enabled="true"
             android:onClick="onClickSegmentationButton" />
     </LinearLayout>
 

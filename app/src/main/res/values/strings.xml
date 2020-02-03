@@ -29,4 +29,5 @@
         ]]>
     </string>
     <string name="capture">Capture</string>
+    <string name="loadingText">Loading, please wait..</string>
 </resources>
